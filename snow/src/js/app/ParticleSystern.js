@@ -61,11 +61,20 @@ define(function(require){
 				// ctx.closePath();
 				// ctx.fill();
 
-				var img = new Image();
-				img.onload = function(){
-					ctx.drawImage(img,0,0,40,40);
-				};
-				img.src = 'http://ie.microsoft.com/testdrive/Performance/LetItSnow/res/Snowflakes.png';
+				var imageObj = new Image();
+
+      imageObj.onload = function() {
+        ctx.drawImage(imageObj, 0, 0);
+      };
+      imageObj.src = 'http://www.html5canvastutorials.com/demos/assets/darth-vader.jpg';
+
+
+
+				// var img = new Image();
+				// img.onload = function(){
+				// 	ctx.drawImage(img,0,0,p.position.x,p.position.y);
+				// };
+				// img.src = 'http://ie.microsoft.com/testdrive/Performance/LetItSnow/res/Snowflakes.png';
 
 			});
 		}
