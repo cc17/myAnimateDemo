@@ -1,0 +1,23 @@
+body,
+ul,
+li,
+div,
+p,
+canvas {
+  margin: 0;
+  padding: 0;
+}
+ul,
+li {
+  list-style: none;
+}
+body {
+  background: url(../img/bk.jpg) no-repeat;
+  background-size: cover;
+}
+.btn-wrap {
+  position: absolute;
+  top: 0;
+  right: 20px;
+  z-index: 2;
+}

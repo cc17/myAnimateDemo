@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title></title>
+	<meta charset="utf-8" />
+	<style type="text/css">
+	body,canvas{
+		margin:0;
+		padding: 0
+	}
+	</style>
+</head>
+<body style="background:url(src/img/bk.jpg) no-repeat;background-size:cover;">
+<script type="text/javascript" src="../Stats.js"></script>
+<script type="text/javascript">
+	var stats = new Stats();
+	stats.setMode(0); // 0: fps, 1: ms
+
+	var total = 0;
+
+	// Align top-left
+	stats.domElement.style.position = 'absolute';
+	stats.domElement.style.left = '0px';
+	stats.domElement.style.top = '0px';
+	document.body.appendChild( stats.domElement );
+
+	//getWindowSize
+	var doc = document.documentElement;
+	function getWinSize(){
+		var sc_w = doc.clientWidth;
+		var sc_h = doc.clientHeight;
+		return {width : sc_w,height:sc_h};
+	};
+
+	//animation
+	
+	var canvas = document.createElement('canvas');
+	canvas.style.position = 'absolute';
+	canvas.dragable = 'false';
+	var ctx = canvas.getContext('2d');
+	var winSize = getWinSize();
+	canvas.width = winSize.width;
+	canvas.height = winSize.height;
+	document.body.appendChild(canvas);
+	//load img
+	(function loadImag(){
+		var img = new Image();
+		img.onload = function(){
+			new Snowflow(canvas,img);
+		};
+		img.src = "http://ie.microsoft.com/testdrive/Performance/LetItSnow/res/Snowflakes.png";
+	})();
+	//initSnowflower
+	var Snowflow = function(canvas,img){
+			this.canvas = canvas;
+			this.ctx = this.canvas.getContext('2d');
+			this.img = img;
+			this.w = this.canvas.width;
+			this.h = this.canvas.height;
+			this.particles = [];
+			this.maskerParticle = [];
+			this.dt = 20;
+			this.bindEvt();
+			this.init();
+		};
+		Snowflow.prototype = {
+			constructor:Snowflow,
+			init:function(){
+				var me = this;
+				var count = 0;
+				var requestId;
+				window.onresize = function(){
+					var winSize = getWinSize();
+					me.canvas.width = winSize.width;
+					me.canvas.height = winSize.height;
+					cancelAnimationFrame(requestId);
+					requestId = null;
+					loop();
+				};
+				var loop = function(){
+					stats.begin();
+					if(count % 2 == 0){
+						if(me.particles.length < 300){
+							me.add();
+							me.grow();
+							me.draw();
+						}
+					}
+					stats.end();
+					count ++;
+					requestId = requestAnimationFrame(loop);
+				};
+				loop();
+			},
+			add:function(){
+				var me = this;
+				var img = this.img;
+				var particle = {
+					position: {x :Math.random() * me.w, y:-8},
+					velocity:{ vx : 2 - Math.random()*2, vy : 3 + Math.random()*3},
+					//添加的时候就确定了位置
+					imgPos: Math.floor(Math.random()*4 + 0),
+					life:1,
+					scale: (Math.random()*0.9 + 0.1),
+					radius: 1 + Math.random()*5,
+					age:0
+				};
+				this.particles.push(particle);
+			},
+			grow:function(){
+				for(var i =0,len = this.particles.length;i<len;i++){
+					var p = this.particles[i];
+					p.position.y += p.velocity.vy;
+					p.position.x += p.velocity.vx;
+					p.age += 0.005;
+					if(p.position.y >= this.h){
+						total ++ ;
+						if(total % 50 == 0){
+							this.maskerParticle.push(p);
+						}
+						this.particles.splice(i,1);
+						len = this.particles.length;
+					}
+				}
+			},
+			'events':{
+				'mousedown':'mouseDown',
+				'mouseup':'mouseUp'
+			},
+			mouseDown :function(){
+				console.log('mousedown');
+				if(this.mouseStatus.up == 0){
+					return;
+				}
+
+				this.mouseStatus.up = 0;
+
+				this.proxyMouseMove = this.mouseMove.bind(this);
+				this.canvas.addEventListener('mousemove',this.proxyMouseMove,false);
+			},
+			mouseMove : function(e){
+				this.eraser(e.pageX,e.pageY);
+				window.getSelection ? window.getSelection().removeAllRanges() : document.selection.empty();
+			},
+			proxyMouseMove :null,
+			mouseUp:function(){
+				console.log('up');
+				this.mouseStatus.up = 1;
+				this.canvas.removeEventListener('mousemove',this.proxyMouseMove,false);
+				this.proxyMouseMove = null;
+				return false;
+			},
+			//擦除效果舞台
+			postCard:function(){
+				var canvas = this.postCardCanvas = document.createElement('canvas');
+				var ctx = this.postCardCtx = canvas.getContext('2d');
+				var winSize = getWinSize();
+					canvas.width = winSize.width;
+					canvas.height = winSize.height;
+				canvas.draggable = false;
+
+				ctx.font="20px 黑体";
+				ctx.fillStyle = "#000";
+				ctx.fillText("稍等片刻，页面将被大雪覆盖,移动鼠标可进行擦除",400,200);
+				document.body.appendChild(canvas);
+				this.mouseStatus = {
+					up:1,
+					down:0
+				};
+				return ctx;
+			},
+			drawMaker:function(){
+				var img = this.img;
+				var canvas = this.postCardCanvas;
+				var ctx = this.postCardCtx;
+				var w = canvas.width;
+				var h = canvas.height;
+				var me = this;
+				//ctx.clearRect(0,0,w,h);
+				if(this.maskerParticle.length && this.maskerParticle.length < 10000){
+					
+					//ctx.clearRect(0,0,w,h);
+					for(var i = 0,len = this.maskerParticle.length;i<len;i++){
+						var p = this.maskerParticle[i];
+						//ctx.save();       
+						// //从图中截取一部分渲染
+						ctx.drawImage(
+		                // source image
+		                    img,
+		                // 开始截取坐标x
+		                    p.imgPos,
+		                // source y
+		                    0,
+		                // source width
+		                    20,
+		                // source height
+		                   20,
+		                // target x
+		                    Math.random()*w,
+		                //target y
+		                    Math.random()*h,
+		                // target width(缩放)
+		                    20*p.scale,
+		                // target height
+		                    20*p.scale);
+					}
+				}
+			},
+			bindEvt:function(){
+				var canvas = this.canvas,
+					events = this.events;
+				var ctx = this.postCard();
+
+				for(var type in events){
+					canvas.addEventListener(type,this[events[type]].bind(this),false);
+				}
+			},
+			eraser:function(mouseX,mouseY){
+				var ctx = this.postCardCtx;
+				ctx.globalCompositeOperation = "destination-out";
+				//ctx.clearRect(mouseX,mouseY,100,100);
+				ctx.fillStyle = "#777";
+				ctx.beginPath();
+				ctx.arc(mouseX,mouseY,20,0,Math.PI*2,true);
+				ctx.closePath();
+				ctx.fill();
+				ctx.globalCompositeOperation = "source-over";
+			},
+			draw:function(){
+				var ctx = this.ctx;
+				var img = this.img;
+				ctx.clearRect(0,0,this.w,this.h);
+				for(var i =0,len = this.particles.length;i<len;i++){
+					var p = this.particles[i];
+
+					//从图中截取一部分渲染
+					ctx.drawImage(
+	                // source image
+	                    img,
+	                // 开始截取坐标x
+	                    p.imgPos* 20,
+	                // source y
+	                    0,
+	                // source width
+	                    20,
+	                // source height
+	                   20,
+	                // target x
+	                    p.position.x,
+	                //target y
+	                    p.position.y,
+	                // target width(缩放)
+	                    20*p.scale,
+	                // target height
+	                    20*p.scale);
+				}
+
+				//drawMasker
+				this.drawMaker();
+
+			}
+
+		};
+
+</script>
+</body>
+</html>
